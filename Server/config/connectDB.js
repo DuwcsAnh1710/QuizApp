@@ -1,0 +1,12 @@
+import sequelize from './sequelize.js';
+
+const connectDB = async () => {
+  try {
+    await sequelize.authenticate();
+    console.log('✅ Database connected successfully.');
+  } catch (error) {
+    console.error('❌ Unable to connect to the database:', error.message);
+  }
+};
+
+export default connectDB;
