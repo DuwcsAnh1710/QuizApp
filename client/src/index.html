@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz App - Trang Chủ</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles/index.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h1 class="app-title">Quiz App - Thi Đấu Trí Tuệ</h1>
+            </div>
+
+            <!-- Nút đăng nhập -->
+            <button class="login-btn" id="loginBtn">
+                <i class="fas fa-user"></i> Đăng nhập
+            </button>
+
+            <!-- Thông tin người dùng sau khi đăng nhập -->
+            <div class="user-info" id="userInfo" style="display: none;">
+                <i class="fas fa-user-circle"></i>
+                <span class="username-tooltip" id="usernameTooltip">Tên người dùng</span>
+            </div>
+        </div>
+        <!-- Join Game Section -->
+        <section class="join-section">
+            <h2 class="section-title">
+                <i class="fas fa-gamepad"></i> Tham gia phòng thi đấu
+            </h2>
+            <div class="pin-input">
+                <input type="text" placeholder="Nhập mã PIN" id="pinInput" maxlength="6">
+                <button class="join-btn" id="joinBtn">
+                    <i class="fas fa-sign-in-alt"></i> Tham gia
+                </button>
+            </div>
+        </section>
+
+        <!-- Action Section -->
+        <div class="action-section">
+            <!-- Create Room -->
+            <section class="create-room">
+                <h2 class="section-title">
+                    <i class="fas fa-plus-circle"></i> Tạo phòng thi đấu
+                </h2>
+                <p>Bắt đầu trò chơi mới với bộ câu hỏi đã có sẵn</p>
+                <button class="create-room-btn" id="createRoomBtn">
+                    <i class="fas fa-play-circle"></i> Tạo phòng mới
+                </button>
+            </section>
+
+            <!-- Create Quiz -->
+            <section class="create-quiz">
+                <h2 class="section-title">
+                    <i class="fas fa-edit"></i> Tạo bộ câu hỏi
+                </h2>
+                <form class="quiz-form" id="quizForm">
+                    <div class="form-group">
+                        <label for="question">Câu hỏi:</label>
+                        <input type="text" id="question" placeholder="Nhập câu hỏi..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="optionA">Đáp án A:</label>
+                        <input type="text" id="optionA" placeholder="Đáp án A..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="optionB">Đáp án B:</label>
+                        <input type="text" id="optionB" placeholder="Đáp án B..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="optionC">Đáp án C:</label>
+                        <input type="text" id="optionC" placeholder="Đáp án C..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="optionD">Đáp án D:</label>
+                        <input type="text" id="optionD" placeholder="Đáp án D..." required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="correctAnswer">Đáp án đúng:</label>
+                        <select id="correctAnswer" required>
+                            <option value="">Chọn đáp án đúng</option>
+                            <option value="0">A</option>
+                            <option value="1">B</option>
+                            <option value="2">C</option>
+                            <option value="3">D</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="save-quiz-btn">
+                        <i class="fas fa-save"></i> Lưu bộ câu hỏi
+                    </button>
+                </form>
+            </section>
+        </div>
+
+        <!-- My Quizzes Section -->
+        <section class="my-quizzes">
+            <h2 class="section-title">
+                <i class="fas fa-book"></i> Bộ câu hỏi của tôi
+            </h2>
+
+            <ul class="quizzes-list" id="quizzesList">
+                <!-- Quiz items will be added here dynamically -->
+                <li class="empty-message">Bạn chưa tạo bộ câu hỏi nào.</li>
+            </ul>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>&copy; 2023 Quiz App - Thi Đấu Trí Tuệ | Mọi quyền được bảo lưu</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const pinInput = document.getElementById('pinInput');
+            const joinBtn = document.getElementById('joinBtn');
+            const createRoomBtn = document.getElementById('createRoomBtn');
+            const loginBtn = document.getElementById('loginBtn');
+            const quizForm = document.getElementById('quizForm');
+            const quizzesList = document.getElementById('quizzesList');
+
+            // Join game with PIN
+            joinBtn.addEventListener('click', () => {
+                const pin = pinInput.value.trim();
+                if (!pin) {
+                    alert('Vui lòng nhập mã PIN để tham gia trò chơi');
+                    return;
+                }
+
+                // Redirect to game page with PIN
+                window.location.href = `lobby.html?pin=${pin}`;
+            });
+
+            // Create new room
+            createRoomBtn.addEventListener('click', () => {
+                // Redirect to game page as host
+                window.location.href = 'lobby.html';
+            });
+
+            // Login button
+            loginBtn.addEventListener('click', () => {
+                window.location.href = "/login";
+            });
+
+            // Sau khi đăng nhập thành công
+            function onLoginSuccess(username) {
+                document.getElementById('loginBtn').style.display = 'none';
+                const userInfo = document.getElementById('userInfo');
+                const tooltip = document.getElementById('usernameTooltip');
+
+                tooltip.textContent = username;
+                userInfo.style.display = 'flex';
+            }
+
+            // Save quiz form
+            quizForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const question = document.getElementById('question').value;
+                const optionA = document.getElementById('optionA').value;
+                const optionB = document.getElementById('optionB').value;
+                const optionC = document.getElementById('optionC').value;
+                const optionD = document.getElementById('optionD').value;
+                const correctAnswer = document.getElementById('correctAnswer').value;
+
+                if (!question || !optionA || !optionB || !optionC || !optionD || !correctAnswer) {
+                    alert('Vui lòng điền đầy đủ thông tin');
+                    return;
+                }
+
+                // Create quiz object
+                const quiz = {
+                    id: Date.now(),
+                    question: question,
+                    options: [optionA, optionB, optionC, optionD],
+                    correctAnswer: parseInt(correctAnswer)
+                };
+
+                // Save quiz to localStorage (temporary solution)
+                saveQuiz(quiz);
+
+                // Reset form
+                quizForm.reset();
+
+                // Show success message
+                alert('Bộ câu hỏi đã được lưu thành công!');
+
+                // Update quizzes list
+                displayQuizzes();
+            });
+
+            // Function to save quiz to localStorage
+            function saveQuiz(quiz) {
+                let quizzes = JSON.parse(localStorage.getItem('quizzes')) || [];
+                quizzes.push(quiz);
+                localStorage.setItem('quizzes', JSON.stringify(quizzes));
+            }
+
+            // Function to display quizzes
+            function displayQuizzes() {
+                const quizzes = JSON.parse(localStorage.getItem('quizzes')) || [];
+
+                if (quizzes.length === 0) {
+                    quizzesList.innerHTML = '<li class="empty-message">Bạn chưa tạo bộ câu hỏi nào.</li>';
+                    return;
+                }
+
+                quizzesList.innerHTML = '';
+
+                quizzes.forEach(quiz => {
+                    const quizItem = document.createElement('li');
+                    quizItem.className = 'quiz-item';
+
+                    quizItem.innerHTML = `
+                        <div class="quiz-info">
+                            <h3>${quiz.question}</h3>
+                            <p>Đáp án đúng: ${String.fromCharCode(65 + quiz.correctAnswer)}</p>
+                        </div>
+                        <div class="quiz-actions">
+                            <button class="quiz-action-btn play-btn" data-id="${quiz.id}">
+                                <i class="fas fa-play"></i> Chơi
+                            </button>
+                            <button class="quiz-action-btn edit-btn" data-id="${quiz.id}">
+                                <i class="fas fa-edit"></i> Sửa
+                            </button>
+                            <button class="quiz-action-btn delete-btn" data-id="${quiz.id}">
+                                <i class="fas fa-trash"></i> Xóa
+                            </button>
+                        </div>
+                    `;
+
+                    quizzesList.appendChild(quizItem);
+                });
+
+                // Add event listeners to action buttons
+                document.querySelectorAll('.play-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const quizId = btn.dataset.id;
+                        window.location.href = `game.html?quiz=${quizId}`;
+                    });
+                });
+
+                document.querySelectorAll('.edit-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const quizId = btn.dataset.id;
+                        editQuiz(quizId);
+                    });
+                });
+
+                document.querySelectorAll('.delete-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const quizId = btn.dataset.id;
+                        deleteQuiz(quizId);
+                    });
+                });
+            }
+
+            // Function to edit quiz
+            function editQuiz(quizId) {
+                const quizzes = JSON.parse(localStorage.getItem('quizzes')) || [];
+                const quiz = quizzes.find(q => q.id == quizId);
+
+                if (!quiz) return;
+
+                // Fill form with quiz data
+                document.getElementById('question').value = quiz.question;
+                document.getElementById('optionA').value = quiz.options[0];
+                document.getElementById('optionB').value = quiz.options[1];
+                document.getElementById('optionC').value = quiz.options[2];
+                document.getElementById('optionD').value = quiz.options[3];
+                document.getElementById('correctAnswer').value = quiz.correctAnswer;
+
+                // Scroll to form
+                document.querySelector('.create-quiz').scrollIntoView({ behavior: 'smooth' });
+
+                // Remove old quiz
+                deleteQuiz(quizId);
+            }
+
+            // Function to delete quiz
+            function deleteQuiz(quizId) {
+                let quizzes = JSON.parse(localStorage.getItem('quizzes')) || [];
+                quizzes = quizzes.filter(q => q.id != quizId);
+                localStorage.setItem('quizzes', JSON.stringify(quizzes));
+                displayQuizzes();
+            }
+
+            // Initialize display
+            displayQuizzes();
+        });
+    </script>
+</body>
+
+</html>
