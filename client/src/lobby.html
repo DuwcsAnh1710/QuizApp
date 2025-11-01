@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz App - Lobby</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="./styles/lobby.css">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <h1 class="app-title">Quiz App</h1>
+            </div>
+            <div class="room-status">Phòng chờ</div>
+        </div>
+
+        <!-- Display Name Input -->
+        <!-- <div class="name-input-section">
+            <label for="displayNameInput">Tên của bạn:</label>
+            <input type="text" id="displayNameInput" placeholder="Nhập tên..." />
+        </div> -->
+
+        <!-- PIN Section -->
+        <section class="pin-section">
+            <h2 class="section-title">
+                <i class="fas fa-key"></i> Mã PIN tham gia
+            </h2>
+            <div class="pin-display" id="pinDisplay"></div>
+            <p class="pin-instructions">
+                Chia sẻ mã <span class="highlight" id="pinValue"></span> này với bạn bè để họ tham gia phòng của
+                bạn.<br>
+                Người chơi có thể nhập mã này tại trang chủ để tham gia trò chơi.
+            </p>
+        </section>
+
+        <section class="players-section">
+            <div class="players-header">
+                <h2 class="players-title">
+                    <i class="fas fa-users"></i> Người chơi
+                </h2>
+                <div class="players-count" id="playersCount">0/10</div>
+            </div>
+            <p id="waitingText">Chờ đợi người chơi khác tham gia...</p>
+            <div class="players-list" id="playersList"></div>
+        </section>
+
+        <!-- Start Button Section -->
+        <section class="start-section">
+            <button class="start-btn" id="startBtn">
+                <i class="fas fa-play"></i> Bắt đầu trò chơi
+            </button>
+            <p class="waiting-message">Bạn có thể bắt đầu ngay khi đã sẵn sàng</p>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const pinDisplay = document.getElementById('pinDisplay');
+            const pinValue = document.getElementById('pinValue');
+            const playersList = document.getElementById('playersList');
+            const playersCount = document.getElementById('playersCount');
+            const waitingText = document.getElementById('waitingText');
+            const startBtn = document.getElementById('startBtn');
+            const displayNameInput = document.getElementById('displayNameInput');
+
+            function getPinFromURL() {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('pin');
+            }
+
+            function updateURLWithPin(pin) {
+                const url = new URL(window.location);
+                url.searchParams.set('pin', pin);
+                window.history.replaceState({}, '', url);
+            }
+
+            let pin = getPinFromURL();
+            const isHost = !pin;
+
+            pinDisplay.textContent = pin;
+            pinValue.textContent = pin;
+
+            let players = [];
+            let roomId = null;
+
+            const socket = io(`http://${window.location.host}`, { query: { pin } });
+
+            socket.on('connect', () => {
+                console.log('Connected to Socket.IO server, joining with PIN:', pin);
+
+                const displayName = displayNameInput?.value?.trim() || 'Người chơi';
+
+                if (isHost) {
+                    socket.emit('createRoom', { hostUserId: socket.id, displayName });
+                } else {
+                    socket.emit('joinRoom', { code: pin, displayName }, (response) => {
+                        console.log('Join room response:', response);
+                        if (response.success) {
+                            players = response.room.players || [];
+                            roomId = response.room.id;
+                            updatePlayersCount();
+                            renderPlayersList();
+                        } else {
+                            console.error('Failed to join room:', response.message);
+                            waitingText.textContent = response.message || 'Lỗi khi tham gia phòng';
+                        }
+                    });
+                }
+            });
+
+            socket.on('roomCreated', ({ roomId: id, roomCode }) => {
+                roomId = id;
+                pin = roomCode;
+
+                console.log('Phòng đã tạo với ID:', roomId, 'và mã PIN:', pin);
+
+                pinDisplay.textContent = pin;
+                pinValue.textContent = pin;
+                updateURLWithPin(pin);
+            });
+
+            socket.on('connect_error', (error) => {
+                console.error('Socket.IO connection error:', error);
+                waitingText.textContent = 'Không thể kết nối đến server';
+            });
+
+            socket.on('roomUpdated', (room) => {
+                console.log('Received roomUpdated:', room);
+                players = room.players || [];
+                roomId = room.id;
+                updatePlayersCount();
+                renderPlayersList();
+            });
+
+            socket.on('gameStarted', ({ roomId }) => {
+                console.log('Game started for room:', roomId);
+                window.location.href = `game.html?host=${isHost}&pin=${pin}`;
+            });
+
+            function updatePlayersCount() {
+                playersCount.textContent = `${players.length}/10`;
+            }
+
+            function renderPlayersList() {
+                playersList.innerHTML = '';
+                players.forEach(player => {
+                    const playerCard = document.createElement('div');
+                    playerCard.className = `player-card ${player.isHost ? 'host' : ''}`;
+                    playerCard.innerHTML = `
+                    <div class="player-avatar">
+                        ${player.isHost ? '<i class="fas fa-crown"></i>' : '<i class="fas fa-user"></i>'}
+                    </div>
+                    <div class="player-name">${player.displayName}</div>
+                    <div class="player-status">Sẵn sàng</div>
+                `;
+                    playersList.appendChild(playerCard);
+                });
+
+                waitingText.textContent = players.length > 1
+                    ? `${players.length} người chơi đã sẵn sàng!`
+                    : 'Chờ đợi người chơi khác tham gia...';
+            }
+
+            startBtn.addEventListener('click', () => {
+                startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang bắt đầu...';
+                startBtn.disabled = true;
+                console.log('Starting game for room:', roomId);
+                socket.emit('startGame', { roomId });
+            });
+
+            updatePlayersCount();
+            renderPlayersList();
+
+            // Thêm biến toàn cục
+            let selectedTopic = 'all';
+
+            // Sau khi kết nối socket, thêm code xử lý chủ đề
+            if (isHost) {
+                // Hiển thị section chọn chủ đề nếu là host
+                document.getElementById('topicSection').style.display = 'block';
+            }
+
+            // Xử lý sự kiện click chọn chủ đề
+            document.querySelectorAll('.topic-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    // Kiểm tra roomId đã có giá trị chưa
+                    if (!roomId) {
+                        console.error('Chưa có roomId, không thể chọn chủ đề');
+                        alert('Vui lòng đợi phòng được tạo xong trước khi chọn chủ đề');
+                        return;
+                    }
+
+                    // Xóa selected khỏi tất cả buttons
+                    document.querySelectorAll('.topic-btn').forEach(b => {
+                        b.classList.remove('selected');
+                    });
+
+                    // Thêm selected cho button được click
+                    btn.classList.add('selected');
+
+                    // Lưu chủ đề được chọn
+                    selectedTopic = btn.dataset.topic;
+
+                    // Gửi chủ đề đã chọn lên server
+                    socket.emit('selectTopic', {
+                        roomId: roomId,
+                        topic: selectedTopic
+                    });
+
+                    console.log('Chủ đề đã chọn:', selectedTopic);
+                });
+            });
+
+            // Gửi sự kiện chọn chủ đề mặc định khi tạo phòng
+            if (isHost) {
+                // Đợi một chút để room được tạo xong
+                setTimeout(() => {
+                    if (roomId) {
+                        socket.emit('selectTopic', {
+                            roomId: roomId,
+                            topic: 'all'
+                        });
+
+                        // Chọn nút "Tất cả chủ đề" mặc định
+                        document.querySelector('[data-topic="all"]').classList.add('selected');
+                    }
+                }, 1000);
+            }
+        });
+    </script>
+
+</body>
+
+</html>
