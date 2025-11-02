@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quiz App - Thi Đấu Trí Tuệ</title>
+
+  <!-- Fonts / icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- socket.io client -->
+  <script src="/socket.io/socket.io.js"></script>
+
+  <style>
+    :root{
+      --bg-a: #2b0b3d;
+      --bg-b: #9b1d25;
+      --panel: rgba(255,255,255,0.06);
+      --glass: rgba(255,255,255,0.06);
+      --accent: linear-gradient(90deg,#4a00e0,#00c6ff);
+      --card-bg: rgba(255,255,255,0.06);
+      --soft: rgba(255,255,255,0.9);
+    }
+
+    /* Gradient background like your red/purple screenshot */
+    body{
+      margin:0;
+      font-family: "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      min-height:100vh;
+      /* gradient similar to screenshot */
+      background: linear-gradient(135deg,#1b1333 0%, #8b1630 45%, #4b1b5d 100%);
+      color:#fff;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    .container{
+      max-width:1100px;
+      margin:24px auto;
+      padding:28px;
+    }
+
+    header{
+      text-align:center;
+      margin-bottom:22px;
+    }
+    .logo{
+      width:72px;height:72px;border-radius:50%;background:#fff;display:inline-flex;align-items:center;justify-content:center;color:#f5c26b;margin-bottom:10px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.35);
+    }
+    h1{ margin:0; font-size:34px; color: #ffd166; text-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+    .subtitle{ margin:6px 0 0; opacity:0.95; color: rgba(255,255,255,0.9); }
+
+    /* selector card */
+    .select-sets {
+      margin: 28px 0;
+      background: rgba(255,255,255,0.06);
+      padding: 18px;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    }
+    .select-sets h2{ margin:0 0 8px; color:#fff; font-size:20px; }
+    .set-buttons{ display:flex; gap:12px; flex-wrap:wrap; }
+    .set-btn{
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.06);
+      padding:8px 12px; border-radius:8px;
+      cursor:pointer; font-weight:600;
+      transition: all .18s ease;
+    }
+    .set-btn:hover{ transform:translateY(-3px); box-shadow:0 6px 18px rgba(0,0,0,0.4); }
+    .set-btn.active{ background: linear-gradient(90deg,#6b2ebd,#ff5c4d); box-shadow:0 10px 30px rgba(0,0,0,0.45); }
+
+    .score-display{
+      margin: 18px 0;
+      text-align:center;
+      padding: 18px;
+      background: rgba(255,255,255,0.12);
+      border-radius: 12px;
+      font-weight:700;
+      font-size:20px;
+      color: #fff;
+    }
+
+    /* quiz card */
+    .quiz-container{
+      margin-top: 18px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 22px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+    }
+
+    .quiz-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:10px;
+    }
+    .question-counter{
+      background: rgba(255,255,255,0.06); padding:10px 14px; border-radius:26px;
+      font-weight:700;
+    }
+    .timer{ background: rgba(255,255,255,0.08); padding:10px 14px; border-radius:26px; font-weight:700; }
+
+    .question-content{ margin-top:12px; }
+    .question-text{
+      background: rgba(255,255,255,0.12);
+      padding:26px;
+      border-radius: 12px;
+      font-size:22px;
+      text-align:center;
+      color:#fff;
+      margin-bottom:16px;
+      min-height:64px;
+      display:flex; align-items:center; justify-content:center;
+    }
+
+    .options-container{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    .option-btn{
+      background:#ffffff; color:#333; border-radius:10px; padding:18px;
+      border:1px solid rgba(0,0,0,0.06); cursor:pointer; text-align:left;
+      font-weight:600; box-shadow: 0 4px 18px rgba(0,0,0,0.18);
+      transition: transform .12s ease, box-shadow .12s ease, opacity .12s;
+      display:flex; align-items:center; gap:12px;
+    }
+    .option-letter{
+      width:36px; height:36px; border-radius:50%; background: #6b6bff; color:white; display:inline-flex; align-items:center; justify-content:center; font-weight:700;
+    }
+    .option-btn.faded{ opacity:0.45; transform:scale(.995); }
+    .option-btn.selected{ box-shadow:0 12px 30px rgba(0,0,0,0.35); transform:translateY(-3px); }
+    .option-btn.correct{ background: linear-gradient(90deg,#4facfe,#00f2fe); color:#fff; border: none; }
+    .option-btn.incorrect{ background: linear-gradient(90deg,#ff6b6b,#ff9e7d); color:#fff; border:none; }
+
+    .progress-bar{ margin-top:18px; height:10px; background: rgba(255,255,255,0.06); border-radius:6px; overflow:hidden; }
+    .progress{ height:10px; width:100%; background: linear-gradient(90deg,#4340ff,#00c4ff); border-radius:6px; }
+
+    .status-message{ text-align:center; margin:12px 0; color:rgba(255,255,255,0.9); font-weight:600; }
+
+    /* results */
+    .results-container{ display:none; text-align:center; margin-top:20px; color:#fff; }
+    .ranking-container{ display:none; margin-top:18px; }
+
+    /* smaller screens */
+    @media (max-width:720px){
+      .options-container{ grid-template-columns: 1fr; }
+      .container{ padding:14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo"><i class="fas fa-brain"></i></div>
+      <h1>Quiz App - Thi Đấu Trí Tuệ</h1>
+      <p class="subtitle">Mỗi giây còn lại = 100 điểm! Trả lời nhanh để đạt điểm cao!</p>
+      <p class="subtitle" style="margin-top:8px;font-weight:600;">Mã phòng: <span id="roomCode">---</span></p>
+    </header>
+
+    <div class="select-sets" id="setPicker">
+      <h2>Chọn bộ đề</h2>
+      <p style="margin:6px 0 12px; color: rgba(255,255,255,0.85);">Chọn một bộ đề để bắt đầu (Toán, Lý, Hóa, Địa, Anh).</p>
+      <div class="set-buttons" id="setButtons">
+        <!-- buttons added by JS -->
+      </div>
+    </div>
+
+    <div class="score-display">Điểm hiện tại: <span id="currentScore">0</span></div>
+
+    <div class="status-message" id="statusMessage">Chưa chọn bộ đề</div>
+
+    <div class="quiz-container" id="quizCard" style="display:none;">
+      <div class="quiz-header">
+        <div class="question-counter">Câu hỏi <span id="currentQuestion">1</span>/<span id="totalQuestions">0</span></div>
+        <div class="timer"><i class="fas fa-clock"></i> <span id="timeLeft">15</span> giây</div>
+      </div>
+
+      <div class="question-content">
+        <div class="question-text" id="question">Đang chờ câu hỏi...</div>
+        <div class="options-container" id="options"></div>
+        <div class="progress-bar"><div id="progress" class="progress"></div></div>
+      </div>
+    </div>
+
+    <div class="results-container" id="resultsContainer">
+      <i class="fas fa-medal" style="font-size:5rem;color:#ffd166;margin-bottom:10px;"></i>
+      <h2 class="results-title">Chúc mừng bạn đã hoàn thành!</h2>
+      <div class="final-score" id="finalScore">0</div>
+      <p class="result-message" id="resultMessage">Bạn đã trả lời xong.</p>
+      <button class="btn" id="playAgainBtn" style="margin-top:12px;padding:10px 18px;border-radius:8px;background:#ffd166;border:none;font-weight:700;cursor:pointer;">Chơi lại</button>
+    </div>
+
+  </div>
+
+  <script>
+    const socket = io();
+
+    let currentIndex = 0;
+    let questions = [];
+    let score = 0;
+
+    // Khi server gửi data câu hỏi
+    socket.on("questionsData", (data) => {
+      questions = data;
+      document.getElementById("totalQuestions").innerText = questions.length;
+      if (questions.length > 0) {
+        loadQuestion(currentIndex);
+      } else {
+        document.getElementById('question').innerText = "Không có câu hỏi nào!";
+      }
+    });
+
+    // Gửi request lấy câu hỏi khi client vừa connect
+    socket.emit("getQuestions");
+
+    function loadQuestion(index) {
+      const q = questions[index];
+      if (!q) return;
+
+      // Cập nhật số thứ tự câu hỏi
+      document.getElementById("currentQuestion").innerText = index + 1;
+
+      // Hiển thị câu hỏi
+      document.getElementById("question").innerText = q.content;
+
+      // Hiển thị đáp án
+      const optionsContainer = document.getElementById("options");
+      optionsContainer.innerHTML = "";
+
+      const letters = ["A", "B", "C", "D"];
+      [q.choice_a, q.choice_b, q.choice_c, q.choice_d].forEach((choice, i) => {
+        const btn = document.createElement("button");
+        btn.classList.add("option-btn");
+        btn.innerHTML = `<span class="option-letter">${letters[i]}</span> ${choice}`;
+        btn.onclick = () => checkAnswer(q.id, i);
+        optionsContainer.appendChild(btn);
+      });
+
+      // Reset trạng thái
+      document.getElementById("statusMessage").innerText = "";
+      document.getElementById("timeLeft").innerText = "15";
+    }
+
+    // Gửi đáp án lên server
+    function checkAnswer(questionId, answerIndex) {
+      socket.emit("checkAnswer", { questionId, answerIndex });
+    }
+
+    // Nhận kết quả từ server
+    socket.on("answerResult", (isCorrect) => {
+      const statusMessage = document.getElementById("statusMessage");
+      if (isCorrect) {
+        statusMessage.innerText = "✅ Đúng rồi!";
+        score += 100; // hoặc tính theo thời gian còn lại
+      } else {
+        statusMessage.innerText = "❌ Sai mất rồi!";
+      }
+
+      document.getElementById("currentScore").innerText = score;
+
+      setTimeout(() => {
+        nextQuestion();
+      }, 1500);
+    });
+
+    function nextQuestion() {
+      currentIndex++;
+      if (currentIndex < questions.length) {
+        loadQuestion(currentIndex);
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      document.querySelector(".quiz-container").style.display = "none";
+      document.getElementById("resultsContainer").style.display = "block";
+      document.getElementById("finalScore").innerText = score;
+      document.getElementById("resultMessage").innerText = `Bạn đã hoàn thành ${questions.length} câu hỏi và đạt ${score} điểm!`;
+    }
+
+    // Xử lý nút chơi lại
+    document.getElementById("playAgainBtn").addEventListener("click", () => {
+      currentIndex = 0;
+      score = 0;
+      document.getElementById("currentScore").innerText = "0";
+      document.getElementById("resultsContainer").style.display = "none";
+      document.querySelector(".quiz-container").style.display = "block";
+      loadQuestion(currentIndex);
+    });
+  </script>
+
+  <script>
+document.addEventListener('DOMContentLoaded', () => {
+  const socket = io();
+
+  // Elements
+const setButtonsEl = document.getElementById('setButtons');
+      const statusMessageEl = document.getElementById('statusMessage');
+      const roomCodeEl = document.getElementById('roomCode');
+      const quizCard = document.getElementById('quizCard');
+      const questionEl = document.getElementById('question');
+      const optionsEl = document.getElementById('options');
+      const currentQuestionEl = document.getElementById('currentQuestion');
+      const totalQuestionsEl = document.getElementById('totalQuestions');
+      const timeLeftEl = document.getElementById('timeLeft');
+      const progressEl = document.getElementById('progress');
+      const currentScoreEl = document.getElementById('currentScore');
+      const resultsContainer = document.getElementById('resultsContainer');
+      const finalScoreEl = document.getElementById('finalScore');
+      const playAgainBtn = document.getElementById('playAgainBtn');
+
+      // internal state
+      let currentRoomId = null;      // set when create_room callback returns
+      let chosenSetId = null;
+      let questions = [];            // questions for this room (client may see them via new_question events)
+      let currentQuestion = null;    // payload.question
+      let currentIndex = 0;
+      let timer = null;
+      let timeLeft = 0;
+      let waitingForResult = false;
+      let selectedIndex = null;
+      let playerScore = 0;
+
+      // Subjects fallback (in case server doesn't return sets). Map names -> setIds (null fallback).
+      // If you have set IDs in DB, replace null with real ids or let server return sets.
+      // FIX: Thêm biến để chặn đổi bộ khi chưa chơi xong
+      let currentSubject = null;
+      let currentQuestionIndex = 0;
+      const totalQuestions = 12;
+      const SUBJECTS = [
+        { id: null, name: 'Toán' },
+        { id: null, name: 'Lý' },
+        { id: null, name: 'Hóa' },
+        { id: null, name: 'Địa' },
+        { id: null, name: 'Anh' }
+      ];
+
+      // Create room on connect (so server can send new_question to this room)
+      socket.emit('create_room', { displayName: 'Host' }, (res) => {
+        if (res && res.ok) {
+          currentRoomId = res.roomId || res.roomId || null;
+          roomCodeEl.textContent = res.code || '---';
+        }
+      });
+
+      // Request available sets from server
+      function loadSetsFromServer() {
+        socket.emit('get_question_sets', (res) => {
+          // optional callback ack - some servers return via 'question_sets' event instead
+        });
+      }
+
+      // Server may emit 'question_sets' with arrays
+      socket.on('question_sets', (sets) => {
+        // Expect sets = [{id, name, count}]
+        if (Array.isArray(sets) && sets.length) {
+          renderSetButtons(sets.map(s => ({ id: s.id, name: s.name, count: s.count })));
+        } else {
+          renderSetButtons(SUBJECTS);
+        }
+      });
+
+      // If server doesn't implement question_sets, use fallback SUBJECTS
+      // Also attempt to call get_question_sets at start
+      loadSetsFromServer();
+      // fallback: after short delay if no server reply, render default
+      setTimeout(() => {
+        if (setButtonsEl.children.length === 0) renderSetButtons(SUBJECTS);
+      }, 600);
+
+      function renderSetButtons(list){
+        setButtonsEl.innerHTML = '';
+        list.forEach(s => {
+          const b = document.createElement('button');
+          b.className = 'set-btn';
+          b.textContent = s.name + (s.count ? ` (${s.count})` : '');
+          b.onclick = () => selectSet(b, s);
+          setButtonsEl.appendChild(b);
+        });
+      }
+
+      function selectSet(buttonEl, set){
+        // UI: mark active
+         if (currentSubject !== null && currentQuestionIndex < totalQuestions) {
+      alert("Bạn phải hoàn thành bộ " + currentSubject + " trước khi chọn bộ khác!");
+      return;
+    }
+        // Gán subject mới
+        currentSubject = set.name;  // <--- FIX QUAN TRỌNG
+        currentQuestionIndex = 0;
+
+        Array.from(setButtonsEl.children).forEach(btn=>btn.classList.remove('active'));
+        buttonEl.classList.add('active');
+
+        chosenSetId = set.id ?? null;
+        statusMessageEl.textContent = `Đang tải bộ đề "${set.name}" ...`;
+        // show quiz area
+        quizCard.style.display = 'block';
+        // ask server to load the set for this room - server expects roomId, setId
+        socket.emit('choose_set', { roomId: currentRoomId, setId: chosenSetId }, (ack) => {
+          if (!ack || !ack.ok) {
+            statusMessageEl.textContent = `Không thể tải bộ đề: ${ack?.error || 'lỗi server'}`;
+          } else {
+            // server will emit new_question to the room - client handles that
+            statusMessageEl.textContent = `Bắt đầu: bộ đề "${set.name}" — tổng ${ack.total||'?' } câu`;
+          }
+        });
+      }
+
+      // ---- handle new question from server ----
+      socket.on('new_question', (payload) => {
+        // payload: { index, total, question: { id, text, options, timeLimit } }
+        if (!payload || !payload.question) return;
+        // store
+        currentQuestion = payload.question;
+        currentIndex = payload.index - 1;
+        questions = questions || []; // not used heavily client-side
+        totalQuestionsEl.textContent = payload.total || (questions.length || 0);
+        currentQuestionEl.textContent = (payload.index || 1);
+        statusMessageEl.textContent = 'Câu mới đã đến — trả lời nhanh!';
+        selectedIndex = null;
+        waitingForResult = false;
+
+        currentQuestionIndex++; // *** FIX: tăng số câu đã làm trong bộ hiện tại ***
+
+        // show
+        showQuestionOnUI(currentQuestion, payload);
+      });
+
+      function showQuestionOnUI(q, payload){
+        // robust getters
+        const text = q.text ?? q.content ?? q.question ?? '';
+        const options = Array.isArray(q.options) ? q.options : (q.options ?? q.choices ?? []);
+        const timeLimit = Number(q.timeLimit ?? q.time_limit ?? 15);
+
+        questionEl.textContent = text || 'Không có nội dung câu hỏi';
+        // fill options
+        optionsEl.innerHTML = '';
+        options.forEach((opt, idx) => {
+          const btn = document.createElement('button');
+          btn.className = 'option-btn';
+          btn.innerHTML = `<span class="option-letter">${String.fromCharCode(65 + idx)}</span> ${opt ?? ''}`;
+          btn.onclick = () => onSelectOption(idx, btn);
+          optionsEl.appendChild(btn);
+        });
+
+        // timer
+        clearTimer();
+        timeLeft = timeLimit;
+        timeLeftEl.textContent = timeLeft;
+        progressEl.style.width = '100%';
+
+        timer = setInterval(() => {
+          timeLeft -= 1;
+          if (timeLeft < 0) timeLeft = 0;
+          timeLeftEl.textContent = timeLeft;
+          const pct = (timeLeft / timeLimit) * 100;
+          progressEl.style.width = pct + '%';
+          if (timeLeft === 0) {
+            clearTimer();
+            // inform server? server manages timeout and will emit timeUp and reveal_answer,
+            // but client should also reveal if server is not configured -> request reveal
+            if (!waitingForResult && selectedIndex === null) {
+              // show timed out locally; server should send reveal soon; but mark waiting
+              statusMessageEl.textContent = 'Hết giờ!';
+            }
+          }
+        }, 1000);
+
+        // show card if hidden
+        quizCard.style.display = 'block';
+      }
+
+      function clearTimer(){
+        if (timer) { clearInterval(timer); timer = null; }
+      }
+
+      // When user selects an option
+      function onSelectOption(idx, btn){
+        if (waitingForResult) return;
+        if (!currentQuestion) return;
+        selectedIndex = idx;
+
+        // local UI selection style
+        Array.from(optionsEl.children).forEach(b => b.classList.remove('selected','faded'));
+        Array.from(optionsEl.children).forEach(b => { if (b !== btn) b.classList.add('faded'); });
+        btn.classList.add('selected');
+
+        // compute time used (server expects timeUsed or timeLeft)
+        const timeUsed = (Number(currentQuestion.timeLimit ?? currentQuestion.time_limit ?? timeLeft) - timeLeft);
+        // send to server via submit_answer
+        waitingForResult = true;
+        statusMessageEl.textContent = 'Đã chọn đáp án — đang chờ server chấm...';
+
+        // Use submit_answer (as socketHandle expects)
+        socket.emit('submit_answer', {
+          roomId: currentRoomId,
+          questionId: currentQuestion.id,
+          answerIndex: idx,
+          timeUsed: timeUsed
+        }, (ack) => {
+          // ack from server (optional)
+          if (!ack || !ack.ok) {
+            // if error, show info but still wait for server events
+            statusMessageEl.textContent = `Lỗi chấm: ${ack?.error || 'Không nhận được phản hồi'}`;
+            waitingForResult = false;
+          } else {
+            // server may also emit 'answerResult' to the socket, handle that below
+          }
+        });
+      }
+
+      // server can send answerResult specifically to the answering socket
+      socket.on('answerResult', (payload) => {
+        // payload often: { correct, gained }
+        if (payload == null) return;
+        const correct = Boolean(payload.correct);
+        const gained = Number(payload.gained ?? 0);
+
+        // Update score if server returned gained
+        if (gained && !isNaN(gained)) {
+          playerScore += gained;
+          currentScoreEl.textContent = playerScore;
+        }
+
+        // If server used reveal_answer event to mark correctIndex for all, wait for that;
+        // else we can reveal based on payload.correct combined with currentQuestion.correct (if present)
+        // But server should emit 'reveal_answer' to room — handle reveal there.
+        // As fallback, if payload.correct === true, mark selected as correct locally:
+        if (!payload._serverRevealed) {
+          // local fallback
+          const btns = Array.from(optionsEl.children);
+          if (payload.correct) {
+            if (btns[selectedIndex]) btns[selectedIndex].classList.add('correct');
+            statusMessageEl.textContent = 'Chính xác!';
+          } else {
+            if (btns[selectedIndex]) btns[selectedIndex].classList.add('incorrect');
+            statusMessageEl.textContent = 'Sai rồi!';
+          }
+          btns.forEach(b => b.disabled = true);
+          // advance when server will emit next new_question, but as fallback:
+          setTimeout(() => {
+            // do nothing — server will send new_question; if not, you can request next
+            // we attempt to keep client passive and wait for server's new_question
+          }, 900);
+        }
+      });
+
+      // server may broadcast reveal_answer to all clients in room
+      // payload: { correctIndex }
+      socket.on('reveal_answer', (payload) => {
+        if (!payload) return;
+        const correctIndex = payload.correctIndex;
+        const btns = Array.from(optionsEl.children);
+        if (typeof correctIndex === 'number' && btns[correctIndex]) {
+          btns[correctIndex].classList.add('correct');
+        }
+        if (selectedIndex !== null && selectedIndex !== correctIndex && btns[selectedIndex]) {
+          btns[selectedIndex].classList.add('incorrect');
+        }
+        btns.forEach(b => b.disabled = true);
+        // if server did not send gained in answerResult, server probably emitted rankingData; but server's submit_answer callback may have included gained
+        // briefly show message
+        if (selectedIndex !== null) {
+          statusMessageEl.textContent = (selectedIndex === correctIndex) ? 'Chính xác!' : 'Sai rồi!';
+        } else {
+          statusMessageEl.textContent = 'Kết quả: Đáp án đúng đã được hiện.';
+        }
+      });
+
+      // server emits timeUp when room's timer ends: payload may include correctIndex
+      socket.on('timeUp', (payload) => {
+        // show correct if given
+        const correctIndex = (payload && (payload.correctIndex ?? payload.correct)) ?? null;
+        const btns = Array.from(optionsEl.children);
+        if (typeof correctIndex === 'number' && btns[correctIndex]) btns[correctIndex].classList.add('correct');
+        // disable all
+        btns.forEach(b => b.disabled = true);
+        statusMessageEl.textContent = 'Hết giờ, chuyển câu...';
+      });
+
+      // server eventually emits new_question for next Q; client listens above
+      // Also server may emit 'rankingData' or 'game_over' - implement simple handlers:
+      socket.on('rankingData', (r) => {
+        // optional: you can display ranking; for now just console
+        console.debug('rankingData', r);
+      });
+
+      socket.on('game_over', (ranking) => {
+        // show results screen
+        quizCard.style.display = 'none';
+        resultsContainer.style.display = 'block';
+        finalScoreEl.textContent = playerScore;
+        document.getElementById('resultMessage').textContent = `Trò chơi kết thúc. Tổng điểm: ${playerScore}`;
+
+        // *** FIX: reset để có thể chọn bộ khác ***
+        alert("Bạn đã hoàn thành bộ " + currentSubject + ". Giờ bạn có thể chọn bộ khác.");
+        currentSubject = null;
+        currentQuestionIndex = 0;
+      });
+
+      
+
+      // If server doesn't push sets but pushes bulk questions (legacy), support 'questionsData' event:
+      socket.on('questionsData', (arr) => {
+        // fallback: treat as single set loaded client-side (not room-managed)
+        if (!Array.isArray(arr)) return;
+        questions = arr.map(q => ({
+          id: q.id,
+          text: q.question ?? q.content ?? q.question_text ?? q.content,
+          options: q.options ?? q.choices ?? [q.choice_a,q.choice_b,q.choice_c,q.choice_d],
+          timeLimit: Number(q.timeLimit ?? q.time_limit ?? 15)
+        }));
+        totalQuestionsEl.textContent = questions.length;
+        // show first question locally (only as fallback)
+        if (questions.length) {
+          currentIndex = 0;
+          // create new_question-like payload locally
+          const payload = { index: 1, total: questions.length, question: { id: questions[0].id, text: questions[0].text, options: questions[0].options, timeLimit: questions[0].timeLimit } };
+          socket.emit('choose_set', { roomId: currentRoomId, setId: null }, ()=>{}); // try to tell server we started - no harm
+          // directly show locally:
+          showQuestionOnUI(payload.question, payload);
+        }
+      });
+
+      // Play again
+      playAgainBtn.addEventListener('click', () => location.reload());
+
+      // safety: clear timers on page unload
+      window.addEventListener('beforeunload', () => {
+        clearTimer();
+      });
+});
+</script>
+</body>
+
+</html>
