@@ -31,7 +31,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 
-// 🚩 Serve client (index.html, game.html)
+
 app.use(express.static(path.join(__dirname, '..', '..', 'client', 'src',)));
 
 app.get('/', (req, res) => {
@@ -44,15 +44,12 @@ app.get('/login', (req, res) => {
 const server = http.createServer(app);
 const io = new IOServer(server, { cors: { origin: '*' } });
 
-// 🚩 SOCKET.IO
 const ROOMS = Object.create(null);
 
-// helper to make a short room code
 function makeRoomCode() {
   return Math.random().toString(36).slice(2, 7).toUpperCase();
 }
 
-// send question for room (server controls timeline)
 function sendCurrentQuestion(io, roomId) {
   const room = ROOMS[roomId];
   if (!room) return;
